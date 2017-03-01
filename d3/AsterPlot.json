@@ -1,0 +1,100 @@
+[
+  {
+    "id": "FIS",
+    "order": 1.1,
+    "score": 59,
+    "weight": 0.5,
+    "label": "Fisheries"
+  },
+  {
+    "id": "MAR",
+    "order": 1.3,
+    "score": 24,
+    "weight": 0.5,
+    "label": "Mariculture"
+  },
+  {
+    "id": "AO",
+    "order": 2,
+    "score": 98,
+    "weight": 1,
+    "label": "Artisanal Fishing Opportunities"
+  },
+  {
+    "id": "NP",
+    "order": 3,
+    "score": 60,
+    "weight": 1,
+    "label": "Natural Products"
+  },
+  {
+    "id": "CS",
+    "order": 4,
+    "score": 74,
+    "weight": 1,
+    "label": "Carbon Storage"
+  },
+  {
+    "id": "CP",
+    "order": 5,
+    "score": 70,
+    "weight": 1,
+    "label": "Coastal Protection"
+  },
+  {
+    "id": "TR",
+    "order": 6,
+    "score": 42,
+    "weight": 1,
+    "label": "Tourism &  Recreation"
+  },
+  {
+    "id": "LIV",
+    "order": 7.1,
+    "score": 77,
+    "weight": 0.5,
+    "label": "Livelihoods"
+  },
+  {
+    "id": "ECO",
+    "order": 7.3,
+    "score": 88,
+    "weight": 0.5,
+    "label": "Economies"
+  },
+  {
+    "id": "ICO",
+    "order": 8.1,
+    "score": 60,
+    "weight": 0.5,
+    "label": "Iconic Species"
+  },
+  {
+    "id": "LSP",
+    "order": 8.3,
+    "score": 65,
+    "weight": 0.5,
+    "label": "Lasting Special Places"
+  },
+  {
+    "id": "CW",
+    "order": 9,
+    "score": 71,
+    "weight": 1,
+    "label": "Clean Waters"
+  },
+  {
+    "id": "HAB",
+    "order": 10.1,
+    "score": 88,
+    "weight": 0.5,
+    "label": "Habitats"
+  },
+  {
+    "id": "SPP",
+    "order": 10.3,
+    "score": 83,
+    "weight": 0.5,
+    "label": "Species"
+  }
+]

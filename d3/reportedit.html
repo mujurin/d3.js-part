@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.bar {
+  fill: steelblue;
+}
+
+.bar:hover {
+  fill: brown;
+}
+
+.arc text {
+  font: 10px sans-serif;
+}
+
+.arc path {
+  stroke: #fff;
+}
+
+#hasil {
+  position: absolute;
+    left: 280px;
+    margin-top: -600px;
+}
+
+#but {
+    margin-left: 20px;    
+}    
+    
+#inputkan{
+  margin-top: 10px;
+  margin: 20px;
+}
+caption, p {
+  margin-top: 5px;
+    margin-bottom: 5px;
+  margin: 20px;
+}
+    
+ul.tab {
+    list-style-type: none;
+    margin-left: 30px;
+    margin-bottom: -10px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+
+/* Float the list items side by side */
+ul.tab li {float: left;}
+
+/* Style the links inside the list items */
+ul.tab li a {
+    display: inline-block;
+    color: black;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    transition: 0.3s;
+    font-size: 17px;
+}
+
+/* Change background color of links on hover */
+ul.tab li a:hover {
+    background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+ul.tab li a:focus, .active {
+    background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 6px 12px;
+    -webkit-animation: fadeEffect 1s;
+    animation: fadeEffect 1s;
+}
+
+@-webkit-keyframes fadeEffect {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+
+@keyframes fadeEffect {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+</style>
+<body>
+    <script src="https://parall.ax/parallax/js/jspdf.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="js/epoch.min.js"></script>
+<link rel="stylesheet" type="text/css" href="css/epoch.min.css">
+    
+    
+<ul class="tab">
+  <li><a href="#" class="tablinks" onclick="openCity(event, 'Basic')">Basic Charts</a></li>
+  <li><a href="#" class="tablinks" onclick="openCity(event, 'Realti')">Real-time Charts</a></li>
+</ul>
+
+<div id="Basic" class="tabcontent">
+   
+<form enctype="multipart/form-data" id="inputkan">
+ Input URL <br>
+ <input type="url" name="url"><br><br>
+ Chart <br>
+<!--<input type="file" name="files" id="files"/></br>-->
+<select  id="drop" style="width:170px;">
+  <option value="">-</option>
+  <option value="bar">bar chart</option>
+  <option value="line">line chart</option>
+  <option value="pie">pie chart</option>
+  <option value="map">map chart</option>
+</select></br></br>
+<button type="button" onclick="file()">VIEW</button>
+<button type="button" id="but" onclick="klik()">Show in chart</button></br>
+</form>
+<p>ROW(X)</p>
+<div style="height:180px;width:200px;overflow:scroll; auto;margin:20px;">
+<caption></caption><hr/>
+<div id="pilihan"></div>
+</div>
+<p>COL(Y)</p>
+<div style="height:180px;width:200px;overflow:scroll;auto;margin:20px;">
+<caption></caption><hr/>
+<div id="pilih"></div>
+</div>
+
+ <div id="hasil" width="1000" height="800"></div>
+<button align="right" id="save">Save to PNG</button> <button id="savepdf">Save to PDF</button>
+	<canvas id="Canvas" width="1000" height="800"  style="display:none;"></canvas>
+    <canvas id="canvaspdf" width="800" height="500"  style="display:none;"></canvas>
+</div>
+
+<div id="Realti" class="tabcontent">
+<form enctype="multipart/form-data" id="inputkan">
+<br></br>
+<select id="typer" style="width:170px;">
+  <option value="">-</option>
+  <option value="bar">Bar Chart</option>
+  <option value="line">Line Chart</option>
+  <option value="area">Area Chart</option>
+</select></br></br>
+<button type="button" id="realt" onclick="klikreal()">VIEW</button>
+</br></br>
+</form>
+  <div id="hasilreal" class="epoch category10" style="width:1000px; height:400px; margin-top:50px; margin-left:25px;"></div>
+</div>
+
+
+
+<script>
+function openCity(evt, cityName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(cityName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+</script>
+<script>
+const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+function reviver(key, value) {
+    if (typeof value === "string" && dateFormat.test(value)) {
+        return new Date(value);
+    }
+    
+    return value;
+}
+
+// url = https://api.github.com/users/mralexgray/repos
+//solr = http://192.168.1.70:8983/solr/jajal22/select?q=*%3A*&wt=json&indent=true
+var file;
+var drop;
+function file(){
+//file=$('input[type=file]').val().replace(/C:\\fakepath\\/, '');
+file=$('input[type=url]').val();
+//console.log(file);
+  drop=$('#drop :selected').val();
+d3.json(file, function(error, data) {
+var coll;
+var total=0;
+//console.log(file);
+$.each(data, function(key, value){
+ coll=Object.keys(value);
+ total=Object.keys(value).length;
+ console.log(coll+","+total);
+});
+for (hit=0;hit<total;hit++){
+  var radioBtn = $('<label><input id="x" type="radio" name="Xaxis" value="'+hit+'"/>'+coll[hit]+'</label></br>');
+    radioBtn.appendTo('#pilihan');
+};
+for (hit=0;hit<total;hit++){
+  var radioBtn = $('<label><input id="y" type="radio" name="Yaxis" value="'+hit+'"/>'+coll[hit]+'</label></br>');
+    radioBtn.appendTo('#pilih');
+};
+
+});
+}
+    
+var arr;
+var arrr;
+    
+function klik(){
+  arr=$("input[name='Xaxis']:checked").val();
+  arrr=$("input[name='Yaxis']:checked").val();
+
+console.log(arr+","+arrr);
+    
+d3.select("svg").remove();
+
+if (drop=="bar"){
+var margin = {top: 30, right: 20, bottom: 200, left: 150},
+    width = 1000 - margin.left - margin.right,
+    height = 800 - margin.top - margin.bottom;
+
+var x;
+var y;
+var xAxis;
+var yAxis;
+
+var svg = d3.select("#hasil").append("svg")
+    .style("background-color", 'white')
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.json(file, function(error, data) {
+var col;
+var row;
+var xSel;
+var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+    
+  data.forEach(function(d) {
+  xSel=Object.prototype.toString.call(d[col]);
+  ySel=Object.prototype.toString.call(d[row]);
+  console.log(xSel+","+ySel);
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+  }
+  else if(xSel=='[object Number]' && ySel=='[object String]'){
+   d.col =+d[col];
+        d.row = d[row];
+  }
+    });
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+      
+  x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .05);
+      
+  y = d3.scale.linear()
+    .range([height, 0]);
+      
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+      
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left").ticks(10);
+  
+  x.domain(data.map(function(d) { return d.col; }));
+  y.domain([0, d3.max(data, function(d) { return d.row; })]);
+
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 5)
+      .attr("dy", ".71em")
+      .text(col);
+      
+  svg.selectAll("bar")
+      .data(data)
+      .enter().append("rect")
+      .attr("class", "bar")
+      .attr("fill","steelblue")
+      .attr("x", function(d) { return x(d.col); })
+      .attr("width", x.rangeBand())
+      .attr("y", function(d) { return y(d.row); })
+      .attr("height", function(d) { return height - y(d.row); });
+    };
+    
+  if(xSel=='[object Number]' && ySel=='[object String]'){
+
+  x = d3.scale.linear()
+    .range([0, width]);
+      
+  y = d3.scale.ordinal()
+    .rangeRoundBands([height, 0], .1);
+      
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+      
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+  
+  x.domain([0, d3.max(data, function(d) { return d.col; })]);
+  y.domain( data.map(function(d) { return d.row; }));
+  
+  
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 5)
+      .attr("dy", ".71em")
+      .text(row);
+
+  svg.selectAll("bar")
+      .data(data)
+      .enter().append("rect")
+      .attr("class", "bar")
+      .attr("fill","steelblue")
+      .attr("y", function(d) { return x(d.col); })
+      .attr("width", function(d) { return x(d.col); })
+      .attr("y", function(d) { return y(d.row); })
+      .attr("height", y.rangeBand());
+   };
+   
+});
+}
+
+else if(drop=="line"){
+  // Set the dimensions of the canvas / graph
+
+var margin = {top: 30, right: 20, bottom: 200, left: 150},
+    width = 1000 - margin.left - margin.right,
+    height = 800 - margin.top - margin.bottom;
+
+
+// Set the ranges
+var x;
+var y;
+// Define the axes
+var xAxis;
+var yAxis;
+
+// Define the line
+var valueline = d3.svg.line()
+    .x(function(d) { return x(d.col); })
+    .y(function(d) { return y(d.row); });
+    
+// Adds the svg canvas
+var svg = d3.select("#hasil").append("svg")
+        .style("background-color", 'white')
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")");
+
+// Get the data
+d3.json(file, function(error, data) {
+var col;
+var row;
+var xSel;
+var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+    
+
+  data.forEach(function(d) {
+      xSel=Object.prototype.toString.call(d[col]);
+      ySel=Object.prototype.toString.call(d[row]);
+    if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+    }
+    else if(xSel=='[object Number]' && ySel=='[object String]'){
+        d.col =+d[col];
+        d.row = d[row];
+    }
+  });
+  
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+  x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .80);
+      
+  y = d3.scale.linear()
+    .range([height, 0]);
+      
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+    .ticks(5);
+      
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .ticks(5);
+  
+    // Scale the range of the data
+    x.domain(data.map(function(d) { return d.col; }));
+    y.domain([0, d3.max(data, function(d) { return d.row; })]);
+
+    // Add the valueline path.
+  svg.append("path")
+        //.attr("class", "path")
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width","3px")
+        .attr("d", valueline(data));
+
+    // Add the X Axis
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+    // Add the Y Axis
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("class", "y axis")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px") 
+      .attr("shape-rendering", "crispEdges")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 5)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text(row);
+};
+
+if(xSel=='[object Number]' && ySel=='[object String]'){
+x = d3.scale.linear()
+    .range([0, width]);
+  y = d3.scale.ordinal()
+    .rangeRoundBands([height, 0], .05);
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+    
+  x.domain([0, d3.max(data, function(d) { return d.col; })]);
+  y.domain( data.map(function(d) { return d.row; }));
+  
+   // Add the valueline path.
+ svg.append("path")
+        //.attr("class", "path")
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width","3px")
+        .attr("d", valueline(data));
+
+    // Add the X Axis
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+    // Add the Y Axis
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("class", "y axis")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px") 
+      .attr("shape-rendering", "crispEdges")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 5)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text(col);
+}   
+});
+}
+    
+ if (drop=="pie"){
+  var width = 800,
+    height = 500,
+    radius = Math.min(width, height) / 2;
+
+var color = d3.scale.ordinal()
+    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+
+var arc = d3.svg.arc()
+    .outerRadius(radius - 10)
+    .innerRadius(0);
+
+var labelArc = d3.svg.arc()
+    .outerRadius(radius - 40)
+    .innerRadius(radius - 40);
+
+var pie = d3.layout.pie()
+    .sort(null)
+    .value(function(d) { return d.row; });
+
+var svg = d3.select("#hasil").append("svg")
+    .style("background-color", 'white')
+    .attr("font-size", "10px")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+d3.json(file, function(error, data) {
+  if (error) throw error;
+  var col;
+  var row;
+  var xSel;
+  var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+
+  data.forEach(function(d) {
+       xSel=Object.prototype.toString.call(d[col]);
+      ySel=Object.prototype.toString.call(d[row]);
+      if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+      }
+      else if(xSel=='[object Number]' && ySel=='[object String]'){
+        d.col =d[row];
+        d.row = +d[col];
+      }
+    });
+
+  var g = svg.selectAll(".arc")
+      .data(pie(data))
+      .enter().append("g")
+      .attr("class", "arc");
+
+  g.append("path")
+      .attr("d", arc)
+      .style("fill", function(d) { return color(d.data.col); });
+
+  g.append("text")
+      .attr("text-size", "10px")
+      .style("text-anchor", "middle")
+      .attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+      .attr("dy", ".35em")
+      .text(function(d) { return d.data.col; });
+});
+ }
+    
+d3.select("#save").on("click", function(){
+    var svg = document.querySelector("svg");
+    var svgData = new XMLSerializer().serializeToString(svg);
+    
+    //console.log(html);
+    var imgsrc = "data:image/svg+xml;base64," + btoa(svgData);
+    var img = '<img src="'+imgsrc+'">'; 
+    d3.select("#svgdataurl").html(img);
+        
+    var canvas = document.querySelector("canvas"),
+    context = canvas.getContext("2d");
+    
+    var image = new Image;
+    image.src = imgsrc;
+    image.onload = function() {
+    context.drawImage(image, 0, 0);
+    
+    var a = document.createElement("a");
+    a.download = "reportpng.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+};
+});
+       
+ d3.select("#savepdf").on("click", function(){
+    var svg = document.querySelector("svg");
+    var svgData = new XMLSerializer().serializeToString(svg);
+    
+  //console.log(html);
+    var imgsrc = 'data:image/svg+xml;base64,'+ btoa(svgData);
+    var img = '<img src="'+imgsrc+'">'; 
+    d3.select("#svgdataurl").html(img);
+  
+    if(drop=="line"){ 
+        var canvas = document.getElementById('canvaspdf'),
+            context = canvas.getContext("2d");
+    }
+    else{
+        var canvas = document.getElementById('Canvas'),
+        context = canvas.getContext("2d");
+    }
+     
+    var image = new Image;
+    image.src = imgsrc;
+    image.onload = function() {
+        context.drawImage(image, 0, 0);
+
+        // only jpeg is supported by jsPDF
+        var imgData = canvas.toDataURL("image/jpeg", 1.0);
+        var pdf = new jsPDF('l', 'mm', [297, 210]);
+        
+        pdf.addImage(imgData, 'JPEG', 0, 0);
+        var savepdf = document.getElementById('savepdf');
+        pdf.save("reportpdf.pdf");
+    };
+  });  
+}
+</script>
+<script>  
+function klikreal(){
+var typer; 
+typer=$('#typer :selected').val();
+//$("#hasilreal").empty();
+ document.getElementById("hasilreal").innerHTML = "";
+d3.json("generated.json", function(error, data) {
+$.each(data, function(key, value){
+  col=Object.keys(value)[0];
+  row=Object.keys(value)[1];
+  });
+ var da=new Array();
+ var dataa;
+ var t=0;
+   data.forEach(function(d){
+    d.col = d[col];
+        d.row = +d[row];
+    da[t]='[{"time":'+d.col+',"y":'+d.row+'}]';
+  t++;
+   });
+    
+if (typer=="bar"){  
+   var sing=JSON.parse(da[0]);
+    var barChartData = [{label: "Series 1",values:sing}];
+     var barChartInstance = $('#hasilreal').epoch({
+           type: 'time.bar',     
+           axes: ['right', 'bottom'],
+           data: barChartData,
+      });
+     }
+if (typer=="line"){  
+   var sing=JSON.parse(da[0]);
+    var barChartData = [{label: "Series 1",values:sing}];
+     var barChartInstance = $('#hasilreal').epoch({
+           type: 'time.line',     
+           axes: ['right', 'bottom'],
+           data: barChartData,
+      });
+ }
+ if (typer=="area"){  
+   var sing=JSON.parse(da[0]);
+    var barChartData = [{label: "Series 1",values:sing}];
+     var barChartInstance = $('#hasilreal').epoch({
+           type: 'time.area',     
+           axes: ['right', 'bottom'],
+           data: barChartData,
+      });
+ }
+   var d=1;
+   window.setInterval(updateGraph, 1000);
+   function updateGraph() {
+    var sing=JSON.parse(da[d]);
+  var newBarChartData = sing;
+  barChartInstance.push(newBarChartData);
+  d++;
+  //console.log(sing);
+  }
+});
+}
+</script>
+</body>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+  <script src="js/datamaps.idn.min.js"></script>
+  <style>
+    #container{
+      position: relative;;
+      border: 1px solid green;
+      width: 1300px;
+      height: 600px;
+    }
+  </style>
+</head>
+<body>
+<div id="container"></div>
+<script>
+   var map = new Datamap({
+        scope: 'idn',
+        element: document.getElementById('container'),
+        setProjection: function(element) {
+    var projection = d3.geo.equirectangular()
+      .center([118, -3])
+      //.rotate([4.4, 0])
+      .scale(1400)
+      .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+    var path = d3.geo.path()
+      .projection(projection);
+
+    return {path: path, projection: projection};
+  },
+      });
+</script>
+</body>
+</html>

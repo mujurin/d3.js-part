@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.bar {
+  fill: steelblue;
+}
+
+.bar:hover {
+  fill: brown;
+}
+
+.axis {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+path { 
+    stroke: steelblue;
+    stroke-width: 2;
+    fill: none;
+}
+
+.arc text {
+  font: 10px sans-serif;
+  text-anchor: middle;
+}
+
+.arc path {
+  stroke: #fff;
+}
+
+#but {
+  position: absolute;
+    left: 300px;
+    top: 20px;
+}
+#hasil {
+  position: absolute;
+    left: 300px;
+    margin-top: -570px;
+}
+#inputkan{
+  margin: 20px;
+}
+caption, p {
+  margin: 20px;
+}
+</style>
+<body>
+<form enctype="multipart/form-data" id="inputkan">
+ Input URL <br>
+ <input type="url" name="url"><br><br>
+ Chart <br>
+<!--<input type="file" name="files" id="files"/></br>-->
+<select  id="drop" style="width:170px;">
+  <option value="">-</option>
+  <option value="bar">bar chart</option>
+  <option value="line">line chart</option>
+  <option value="pie">pie chart</option>
+  <option value="map">map chart</option>
+</select></br></br>
+<button type="button" onclick="file()">VIEW</button></br>
+</form>
+<p>ROW(X)</p>
+<div style="height:180px;width:200px;overflow:scroll; auto;margin:20px;">
+<caption></caption><hr/>
+<div id="pilihan"></div>
+</div>
+<p>COL(Y)</p>
+<div style="height:180px;width:200px;overflow:scroll;auto;margin:20px;">
+<caption></caption><hr/>
+<div id="pilih"></div>
+</div>
+<div id="button"></div>
+
+ <div id="hasil" width="1000" height="500"></div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script>
+
+
+const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+function reviver(key, value) {
+    if (typeof value === "string" && dateFormat.test(value)) {
+        return new Date(value);
+    }
+    
+    return value;
+}
+// url = https://api.github.com/users/mralexgray/repos
+//solr = http://192.168.1.70:8983/solr/jajal22/select?q=*%3A*&wt=json&indent=true
+var file;
+var drop;
+function file(){
+//file=$('input[type=file]').val().replace(/C:\\fakepath\\/, '');
+file=$('input[type=url]').val();
+//console.log(file);
+  drop=$('#drop :selected').val();
+d3.json(file, function(error, data) {
+var coll;
+var total=0;
+//console.log(file);
+$.each(data, function(key, value){
+ coll=Object.keys(value);
+ total=Object.keys(value).length;
+ console.log(coll+","+total);
+});
+for (hit=0;hit<total;hit++){
+  var radioBtn = $('<label><input id="x" type="radio" name="Xaxis" value="'+hit+'"/>'+coll[hit]+'</label></br>');
+    radioBtn.appendTo('#pilihan');
+};
+for (hit=0;hit<total;hit++){
+  var radioBtn = $('<label><input id="y" type="radio" name="Yaxis" value="'+hit+'"/>'+coll[hit]+'</label></br>');
+    radioBtn.appendTo('#pilih');
+};
+var button=$('<button type="button" id="but" onclick="klik()">Show in chart</button>');
+button.appendTo("#button");
+
+});
+}
+    
+var arr;
+var arrr;
+    
+function klik(){
+  arr=$("input[name='Xaxis']:checked").val();
+  arrr=$("input[name='Yaxis']:checked").val();
+
+console.log(arr+","+arrr);
+    
+d3.select("svg").remove();
+
+if (drop=="bar"){
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x;
+var y;
+var xAxis;
+var yAxis;
+
+var svg = d3.select("#hasil").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.json(file, function(error, data) {
+var col;
+var row;
+var xSel;
+var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+    
+  data.forEach(function(d) {
+  xSel=Object.prototype.toString.call(d[col]);
+  ySel=Object.prototype.toString.call(d[row]);
+  console.log(xSel+","+ySel);
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+  }
+  else if(xSel=='[object Number]' && ySel=='[object String]'){
+   d.col =+d[col];
+        d.row = d[row];
+  }
+    });
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+  x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .1);
+  y = d3.scale.linear()
+    .range([height, 0], .1);
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left").ticks(10);
+  
+  x.domain(data.map(function(d) { return d.col; }));
+  y.domain([0, d3.max(data, function(d) { return d.row; })]);
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "translate(0," + width + ")");
+
+  svg.selectAll("bar")
+      .data(data)
+    .enter().append("rect")
+      .attr("class", "bar")
+      .attr("x", function(d) { return x(d.col); })
+      .attr("width", x.rangeBand())
+      .attr("y", function(d) { return y(d.row); })
+      .attr("height", function(d) { return height - y(d.row); });
+    };
+    
+  if(xSel=='[object Number]' && ySel=='[object String]'){
+
+  x = d3.scale.linear()
+    .range([0, width]);
+  y = d3.scale.ordinal()
+    .rangeRoundBands([height, 0], .1);
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+  
+  x.domain([0, d3.max(data, function(d) { return d.col; })]);
+  y.domain( data.map(function(d) { return d.row; }));
+  
+  
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis);
+
+  svg.selectAll("bar")
+      .data(data)
+    .enter().append("rect")
+      .attr("class", "bar")
+      .attr("y", function(d) { return x(d.col); })
+      .attr("width", function(d) { return x(d.col); })
+      .attr("y", function(d) { return y(d.row); })
+      .attr("height", y.rangeBand());
+   };
+   
+});
+}
+
+else if(drop=="line"){
+  // Set the dimensions of the canvas / graph
+
+var margin = {top: 30, right: 20, bottom: 30, left: 50},
+    width = 860 - margin.left - margin.right,
+    height = 450 - margin.top - margin.bottom;
+
+
+// Set the ranges
+var x;
+var y;
+// Define the axes
+var xAxis;
+var yAxis;
+
+// Define the line
+var valueline = d3.svg.line()
+    .x(function(d) { return x(d.col); })
+    .y(function(d) { return y(d.row); });
+    
+// Adds the svg canvas
+var svg = d3.select("#hasil").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")");
+
+// Get the data
+d3.json(file, function(error, data) {
+var col;
+var row;
+var xSel;
+var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+    
+
+  data.forEach(function(d) {
+    xSel=Object.prototype.toString.call(d[col]);
+  ySel=Object.prototype.toString.call(d[row]);
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+  }
+  else if(xSel=='[object Number]' && ySel=='[object String]'){
+   d.col =+d[col];
+        d.row = d[row];
+  }
+    });
+  
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+  x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .05);
+  y = d3.scale.linear()
+    .range([height, 0], .1);
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left").ticks(10);
+  
+    // Scale the range of the data
+    x.domain(data.map(function(d) { return d.col; }));
+    y.domain([0, d3.max(data, function(d) { return d.row; })]);
+
+    // Add the valueline path.
+    svg.append("path")
+        .attr("class", "line")
+        .attr("d", valueline(data));
+
+    // Add the X Axis
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+    .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)");
+
+    // Add the Y Axis
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 5)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end");
+};
+
+if(xSel=='[object Number]' && ySel=='[object String]'){
+x = d3.scale.linear()
+    .range([0, width]);
+  y = d3.scale.ordinal()
+    .rangeRoundBands([height, 0], .05);
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+    
+  x.domain([0, d3.max(data, function(d) { return d.col; })]);
+  y.domain( data.map(function(d) { return d.row; }));
+  
+   // Add the valueline path.
+    svg.append("path")
+        .attr("class", "line")
+        .attr("d", valueline(data));
+
+    // Add the X Axis
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+    .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+    // Add the Y Axis
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 5)
+    .attr("dy", ".71em")
+    .style("text-anchor", "end");
+}   
+});
+}
+ if (drop=="pie"){
+  var width = 500,
+    height = 500,
+    radius = Math.min(width, height) / 2;
+
+var color = d3.scale.ordinal()
+    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+
+var arc = d3.svg.arc()
+    .outerRadius(radius - 10)
+    .innerRadius(0);
+
+var labelArc = d3.svg.arc()
+    .outerRadius(radius - 40)
+    .innerRadius(radius - 40);
+
+var pie = d3.layout.pie()
+    .sort(null)
+    .value(function(d) { return d.row; });
+
+var svg = d3.select("#hasil").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+d3.json(file, function(error, data) {
+  if (error) throw error;
+  var col;
+  var row;
+  var xSel;
+  var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+
+  data.forEach(function(d) {
+       xSel=Object.prototype.toString.call(d[col]);
+  ySel=Object.prototype.toString.call(d[row]);
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+  }
+  else if(xSel=='[object Number]' && ySel=='[object String]'){
+   d.col =d[row];
+        d.row = +d[col];
+  }
+    });
+
+  var g = svg.selectAll(".arc")
+      .data(pie(data))
+    .enter().append("g")
+      .attr("class", "arc");
+
+  g.append("path")
+      .attr("d", arc)
+      .style("fill", function(d) { return color(d.data.col); });
+
+  g.append("text")
+      .attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+      .attr("dy", ".35em")
+      .text(function(d) { return d.data.col; });
+});
+
+ }
+}
+</script>
+</body>

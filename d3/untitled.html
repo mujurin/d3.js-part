@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+  <meta charset="UTF-8">
+  <script src="//d3js.org/d3.v3.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="js/epoch.min.js"></script>
+<link rel="stylesheet" type="text/css" href="css/epoch.min.css">
+  </head>
+  <body>
+  <div id="barChart" class="epoch category10" style="width:500px; height: 240px;"></div>
+
+<script>
+d3.json("generated.json", function(error, data) {
+$.each(data, function(key, value){
+	col=Object.keys(value)[0];
+	row=Object.keys(value)[1];
+  });
+ var da=new Array();
+ var dataa;
+ var barChartData = [{label: "Series 1",values:[]}];
+ var barChartInstance = $('#barChart').epoch({
+  type: 'time.line',
+  axes: ['right', 'bottom'],
+  data: barChartData,
+});
+  var t=0;
+   data.forEach(function(d){
+		d.col = d[col];
+        d.row = +d[row];
+		da[t]='[{"time":'+d.col+',"y":'+d.row+'}]';
+	t++;
+   });
+   
+   var d=0;
+   window.setInterval(updateGraph, 1000);
+   function updateGraph() {
+   	var sing=JSON.parse(da[d]);
+	var newBarChartData = sing;
+  barChartInstance.push(newBarChartData);
+  d++;
+  }
+});
+</script>
+</body>
+</html>

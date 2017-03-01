@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+<!--beberapa script di bawah ini digunakan untuk load file2 yang dibutuhkan atau load library-->
+<script src="https://parall.ax/parallax/js/jspdf.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<script src="js/epoch.min.js"></script>
+<link rel="stylesheet" type="text/css" href="css/epoch.min.css">
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+<!-- tampilan awal untuk pilihan chart-->
+<ul class="tab">
+  <li><a href="#" class="tablinks" onclick="openCity(event, 'Basic')">Basic Charts</a></li>
+  <li><a href="#" class="tablinks" onclick="openCity(event, 'Real')">Real-time Charts</a></li>
+</ul>
+
+<div id="Basic" class="tabcontent">
+
+<!--membuat form untuk inputan data apakah dari URL atau dari direktori lokal user-->
+  <form enctype="multipart/form-data" id="inputkan">
+<div>
+<div>
+      <input type="radio" name="url" id="url-dogs" required>
+      <label for="url-dogs">Input Url</label>
+    
+      <div class="reveal-if-active">
+        <input type="url" id="which-dog" name="which-dog" class="require-if-active" data-require-pair="#url-dogs">
+      </div>
+</div>
+
+<div>
+      <input type="radio" name="url" id="url-cats">
+      <label for="url-cats">Input File</label>
+    
+      <div class="reveal-if-active">
+        <input type="file" id="which-cat" name="which-cat" class="require-if-active" data-require-pair="#url-cats">
+      </div>
+</div>
+</div>
+ <b>Chart</b><br>
+<select  id="drop" name="drop" style="width:170px;">
+  <option value="">-</option>
+  <option value="bar">Bar Chart</option>
+  <option value="line">Line Chart</option>
+  <option value="pie">Pie Chart</option>
+  <option value="aster">Aster Plot</option>
+</select></br></br>
+<button type="button" onclick="file()">LOAD</button></br>
+</form>
+<p><b>ROW(X)</b></p>
+<div style="height:120px;width:180px;overflow:scroll; auto;margin:20px;">
+<caption></caption><hr/>
+<div id="pilihan"></div>
+</div>
+<p><b>COL(Y)</b></p>
+<div style="height:120px;width:180px;overflow:scroll;auto;margin:20px;">
+<caption></caption><hr/>
+<div id="pilih"></div>
+</div>
+<div id="button"></div>
+<div id="buttonImage"></div>
+<div id="buttonPDF"></div>
+
+<!--menyediakan tempat untuk menampilkan hasil chart yang diinginkan-->
+<!--menyediakan canvas untuk simpan chart-->
+<div id="hasil" width="1000" height="800"></div>
+  <canvas id="Canvas" width="1000" height="800"  style="display:none;"></canvas>
+    <canvas id="canvaspdf" width="800" height="500"  style="display:none;"></canvas>
+</div>
+
+<div id="Real" class="tabcontent"> 
+  <form enctype="multipart/form-data" id="inputkan">
+    <select id="typer" style="width:170px;">
+        <option value="">-</option>
+        <option value="bar1">Bar Chart</option>
+        <option value="line1">Line Chart</option>
+        <option value="area1">Area Chart</option>
+    </select></br></br>
+    <button type="button" id="realt" onclick="klikreal()">VIEW</button>
+    <div id="hasilreal" class="epoch category10"></div>
+  </form>
+</div>
+
+<script>
+//fungsi openCity diguanakan untuk menjalankan pilihan user apakah basik chart atau real-time chart
+function openCity(evt, cityName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(cityName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+</script>
+
+<script>
+
+const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+//fungsi reviver digunakan untuk menampatkan key dan value dari json yang akan digunakan dalam chart
+function reviver(key, value) {
+    if (typeof value === "string" && dateFormat.test(value)) {
+        return new Date(value);
+    }
+    
+    return value;
+}
+
+//variabel dibawah digunakan untuk melakaukan seleksi inputan apakah dari url atau file lokal
+var file;
+var drop;
+
+function file(){
+
+  //seleksi untuk input data jika user memasukan data dari url
+  if (file=$('input[type=url]').val()) {
+    drop=$('#drop :selected').val();
+d3.json(file, function(error, data) {
+var coll;
+var total=0;
+//console.log(file);
+$.each(data, function(key, value){
+ coll=Object.keys(value);
+ total=Object.keys(value).length;
+ console.log(coll+","+total);
+});
+
+//parsing data json yang dimasukan ke dalam bentuk radio button untuk semua value json
+for (hit=0;hit<total;hit++){
+  var radioBtn = $('<label><input id="x" type="radio" name="Xaxis" value="'+hit+'"/>'+coll[hit]+'</label></br>');
+    radioBtn.appendTo('#pilihan');
+};
+for (hit=0;hit<total;hit++){
+  var radioBtn = $('<label><input id="y" type="radio" name="Yaxis" value="'+hit+'"/>'+coll[hit]+'</label></br>');
+    radioBtn.appendTo('#pilih');
+};
+
+//variabel untuk menampung perintah menampilkan chart setelah memilih x dan y dari radio button value json
+var button=$('<button type="button" id="but" onclick="klik()">Show in chart</button>');
+button.appendTo("#button");
+
+//variabel untuk menampung perintah simpan chart ke dalam bentuk gambar dalam format PNG
+var buttonImage=$('<button type="button" id="save">Save Image</button>');
+buttonImage.appendTo("#buttonImage");
+
+//variabel untuk menampung perintah simpan chart ke dalam bentuk file PDF
+var buttonPDF=$('<button type="button" id="savepdf">Save PDF</button>');
+buttonPDF.appendTo("#buttonPDF");
+});
+  }
+
+  //seleksi jika user memasukan data dari lokal direktori berupa file .json
+else if (file=$('input[type=file]').val().replace(/C:\\fakepath\\/, '')) {
+  drop=$('#drop :selected').val();
+d3.json(file, function(error, data) {
+var coll;
+var total=0;
+//console.log(file);
+$.each(data, function(key, value){
+ coll=Object.keys(value);
+ total=Object.keys(value).length;
+ console.log(coll+","+total);
+});
+for (hit=0;hit<total;hit++){
+  var radioBtn = $('<label><input id="x" type="radio" name="Xaxis" value="'+hit+'"/>'+coll[hit]+'</label></br>');
+    radioBtn.appendTo('#pilihan');
+};
+for (hit=0;hit<total;hit++){
+  var radioBtn = $('<label><input id="y" type="radio" name="Yaxis" value="'+hit+'"/>'+coll[hit]+'</label></br>');
+    radioBtn.appendTo('#pilih');
+};
+var button=$('<button type="button" id="but" onclick="klik()">Show in chart</button>');
+button.appendTo("#button");
+
+var buttonImage=$('<button type="button" id="save">Save Image</button>');
+buttonImage.appendTo("#buttonImage");
+
+var buttonPDF=$('<button type="button" id="savepdf">Save PDF</button>');
+buttonPDF.appendTo("#buttonPDF");
+});
+}
+}
+ 
+ //variabel digunakan untuk menampung pilihan user dalam menentukan nilai x dan y dalam radio-button   
+var arr;
+var arrr;
+    
+function klik(){
+  //nilai x dan y yang dipilih ditampung dalam dua variabel dibawah
+  arr=$("input[name='Xaxis']:checked").val();
+  arrr=$("input[name='Yaxis']:checked").val();
+    
+ //fungsi event remove untuk menghapus setiap chart yang sudah ada jika user mengganti nilai x dan y kemudian ingin menampilkan chart lagi   
+d3.select("svg").remove();
+
+//variabel drop diatas digunakan untuk menentukan chart yang diinginkan
+//jika user memilih bar maka akan menjalankan chart bar
+if (drop=="bar"){
+
+  //memberikan ukuran bar, lebar dan tinggi
+var margin = {top: 30, right: 20, bottom: 200, left: 150},
+    width = 1000 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+//variabel digunakan untuk menampung nilai dari key dan value json
+var x;
+var y;
+var xAxis;
+var yAxis;
+
+//variabel svg digunakan untuk menampung chart ke dalam div "hasil" dan memberikan beberapa atribut untuk ukuran lebar, panjang dan posisi chart
+var svg = d3.select("#hasil").append("svg")
+    .style("background-color", 'white')
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+//load data yang dimasukan dan nilai dari key dan value di tampung dalam col dan row
+d3.json(file, function(error, data) {
+var col;
+var row;
+var xSel;
+var ySel;
+
+//nilai dalam variabel yang masuk dijadikan objek
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+    
+  data.forEach(function(d) {
+  xSel=Object.prototype.toString.call(d[col]);
+  ySel=Object.prototype.toString.call(d[row]);
+  console.log(xSel+","+ySel);
+
+  //melakukan seleksi agar chart bisa ditampilkan, dimana jika nilai x dan y adalah string dan number, maka chart bisa ditampilkan, jika tidak maka chart tidak muncul
+  //karena number untuk ukuran nilai chart dan string untuk nama tiap ukuran chart
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+  }
+  else if(xSel=='[object Number]' && ySel=='[object String]'){
+   d.col =+d[col];
+        d.row = d[row];
+  }
+    });
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+      
+  x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .05);
+      
+  y = d3.scale.linear()
+    .range([height, 0]);
+      
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+      
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left").ticks(10);
+  
+  x.domain(data.map(function(d) { return d.col; }));
+  y.domain([0, d3.max(data, function(d) { return d.row; })]);
+
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 5)
+      .attr("dy", ".71em")
+      .text(col);
+      
+  svg.selectAll("bar")
+      .data(data)
+      .enter().append("rect")
+      .attr("class", "bar")
+      .attr("fill","steelblue")
+      .attr("x", function(d) { return x(d.col); })
+      .attr("width", x.rangeBand())
+      .attr("y", function(d) { return y(d.row); })
+      .attr("height", function(d) { return height - y(d.row); });
+    };
+    
+  if(xSel=='[object Number]' && ySel=='[object String]'){
+
+  x = d3.scale.linear()
+    .range([0, width]);
+      
+  y = d3.scale.ordinal()
+    .rangeRoundBands([height, 0], .1);
+      
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+      
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+  
+  x.domain([0, d3.max(data, function(d) { return d.col; })]);
+  y.domain( data.map(function(d) { return d.row; }));
+  
+  
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 5)
+      .attr("dy", ".71em")
+      .text(row);
+
+  svg.selectAll("bar")
+      .data(data)
+      .enter().append("rect")
+      .attr("class", "bar")
+      .attr("fill","steelblue")
+      .attr("y", function(d) { return x(d.col); })
+      .attr("width", function(d) { return x(d.col); })
+      .attr("y", function(d) { return y(d.row); })
+      .attr("height", y.rangeBand());
+   };
+   
+});
+}
+
+//jika yang dipilih user adalah line chart
+else if(drop=="line"){
+  // Set the dimensions of the canvas / graph
+
+var margin = {top: 30, right: 20, bottom: 200, left: 150},
+    width = 1000 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+
+// Set the ranges
+var x;
+var y;
+// Define the axes
+var xAxis;
+var yAxis;
+
+// Define the line
+var valueline = d3.svg.line()
+    .x(function(d) { return x(d.col); })
+    .y(function(d) { return y(d.row); });
+    
+// membuat canvas bentuk svg yang disimpan dalam variabel svg
+var svg = d3.select("#hasil").append("svg")
+        .style("background-color", 'white')
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")");
+
+// mendapatkan data dari inputan user
+d3.json(file, function(error, data) {
+var col;
+var row;
+var xSel;
+var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+    
+
+  data.forEach(function(d) {
+      xSel=Object.prototype.toString.call(d[col]);
+      ySel=Object.prototype.toString.call(d[row]);
+    if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+    }
+    else if(xSel=='[object Number]' && ySel=='[object String]'){
+        d.col =+d[col];
+        d.row = d[row];
+    }
+  });
+  
+  if(xSel=='[object String]' && ySel=='[object Number]'){
+  x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .80);
+      
+  y = d3.scale.linear()
+    .range([height, 0]);
+      
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+    .ticks(5);
+      
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .ticks(5);
+  
+    // skala rentang dari setiap data
+    x.domain(data.map(function(d) { return d.col; }));
+    y.domain([0, d3.max(data, function(d) { return d.row; })]);
+
+    // menambah nilai 
+  svg.append("path")
+        //.attr("class", "path")
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width","3px")
+        .attr("d", valueline(data));
+
+    // mengambil nilai xAxis
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+    // mengambil nilai yAxis
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("class", "y axis")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px") 
+      .attr("shape-rendering", "crispEdges")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 5)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text(row);
+};
+
+if(xSel=='[object Number]' && ySel=='[object String]'){
+x = d3.scale.linear()
+    .range([0, width]);
+  y = d3.scale.ordinal()
+    .rangeRoundBands([height, 0], .05);
+  xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+  yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+    
+  x.domain([0, d3.max(data, function(d) { return d.col; })]);
+  y.domain( data.map(function(d) { return d.row; }));
+  
+   // Add the valueline path.
+ svg.append("path")
+        //.attr("class", "path")
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width","3px")
+        .attr("d", valueline(data));
+
+    // Add the X Axis
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px")
+      .attr("shape-rendering", "crispEdges")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+    // Add the Y Axis
+  svg.append("g")
+      .attr("font-size", "12px")
+      .attr("class", "y axis")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width","1px") 
+      .attr("shape-rendering", "crispEdges")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 5)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text(col);
+}   
+});
+}
+ 
+ //jika yang dipilih adalah pie chart   
+ else if (drop=="pie"){
+  var width = 800,
+    height = 500,
+    radius = Math.min(width, height) / 2;
+
+var color = d3.scale.ordinal()
+    .range(["#9E0041", "#C32F4B", "#E1514B", "#F47245", "#FB9F59", "#FEC574", "#FAE38C","#EAF195","#C7E89E","#9CD6A4","#6CC4A4","#4D9DB4","#4776B4","#5E4EA1"]);
+
+var arc = d3.svg.arc()
+    .outerRadius(radius - 10)
+    .innerRadius(0);
+
+var labelArc = d3.svg.arc()
+    .outerRadius(radius - 40)
+    .innerRadius(radius - 40);
+
+var labelH = d3.svg.arc()
+    .outerRadius(radius - 40)
+    .innerRadius(radius - 300);
+
+var pie = d3.layout.pie()
+    .sort(null)
+    .value(function(d) { return d.row; });
+
+var svg = d3.select("#hasil").append("svg")
+    .style("background-color", 'white')
+    .attr("font-size", "10px")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+d3.json(file, function(error, data) {
+  if (error) throw error;
+  var col;
+  var row;
+  var xSel;
+  var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+
+  data.forEach(function(d) {
+       xSel=Object.prototype.toString.call(d[col]);
+      ySel=Object.prototype.toString.call(d[row]);
+      if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+      }
+      else if(xSel=='[object Number]' && ySel=='[object String]'){
+        d.col =d[row];
+        d.row = +d[col];
+      }
+    });
+
+  var g = svg.selectAll(".arc")
+      .data(pie(data))
+      .enter().append("g")
+      .attr("class", "arc");
+
+  g.append("path")
+      .attr("d", arc)
+      .style("fill", function(d) { return color(d.data.col); });
+
+  g.append("text")
+      .attr("text-size", "10px")
+      .style("text-anchor", "middle")
+      .attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+      .attr("dy", ".35em")
+      .text(function(d) { return d.data.col; });
+
+  g.append("text")
+      .attr("text-size", "10px")
+      .style("text-anchor", "middle")
+      .attr("transform", function(d) { return "translate(" + labelH.centroid(d) + ")"; })
+      .attr("dy", ".35em")
+      .text(function(d) { return d.data.row; });
+});
+ }
+
+//jika yang dipilih adalah aster plot
+ else if (drop=="aster"){
+  var width = 500,
+    height = 500,
+    radius = Math.min(width, height) / 2,
+    innerRadius = 0.3 * radius;
+
+var pie = d3.layout.pie()
+    .sort(null)
+    .value(function(d) { return d.row; });
+
+var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([0, 0])
+  .html(function(d) {
+    return d.data.label + ": <span style='color:orangered'>" + d.data.col + "</span>";
+  });
+
+var arc = d3.svg.arc()
+  .innerRadius(innerRadius)
+  .outerRadius(function (d) { 
+    return (radius - innerRadius) * (d.data.col / 100.0) + innerRadius; 
+  });
+
+var color = d3.scale.ordinal()
+    .range(["#9E0041", "#C32F4B", "#E1514B", "#F47245", "#FB9F59", "#FEC574", "#FAE38C","#EAF195","#C7E89E","#9CD6A4","#6CC4A4","#4D9DB4","#4776B4","#5E4EA1"]);
+
+var outlineArc = d3.svg.arc()
+        .innerRadius(innerRadius)
+        .outerRadius(radius);
+
+var svg = d3.select("#hasil").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+svg.call(tip);
+
+d3.json(file, function(error, data) {
+  if (error) throw error;
+  var col;
+  var row;
+  var xSel;
+  var ySel;
+    $.each(data, function(key, value){
+  col=Object.keys(value)[arr];
+  row=Object.keys(value)[arrr];
+  });
+
+  data.forEach(function(d) {
+       xSel=Object.prototype.toString.call(d[col]);
+      ySel=Object.prototype.toString.call(d[row]);
+      if(xSel=='[object String]' && ySel=='[object Number]'){
+        d.col = d[col];
+        d.row = +d[row];
+      }
+      else if(xSel=='[object Number]' && ySel=='[object String]'){
+        d.col =d[row];
+        d.row = +d[col];
+      }
+      else if(xSel=='[object Number]' && ySel=='[object Number]'){
+        d.col =d[row];
+        d.row = +d[col];
+      }
+    });
+
+  var path = svg.selectAll(".solidArc")
+      .data(pie(data))
+    .enter().append("path")
+      .attr("class", "solidArc")
+      .attr("stroke", "gray")
+      .attr("d", arc)
+      .style("fill", function(d) { return color(d.data.col); })
+      .on('mouseover', tip.show)
+      .on('mouseout', tip.hide);
+
+  var outerPath = svg.selectAll(".outlineArc")
+      .data(pie(data))
+    .enter().append("path")
+      .attr("fill", "none")
+      .attr("stroke", "gray")
+      .attr("class", "outlineArc")
+      .attr("d", outlineArc);  
+
+  // calculate the weighted mean score
+  var score = 
+    data.reduce(function(a, b) {
+      //console.log('a:' + a + ', b.score: ' + b.score + ', b.weight: ' + b.weight);
+      return a + (b.col * b.row); 
+    }, 0) / 
+    data.reduce(function(a, b) { 
+      return a + b.row; 
+    }, 0);
+
+  svg.append("svg:text")
+    .attr("class", "aster-score")
+    .attr("dy", ".35em")
+    .attr("text-anchor", "middle") // text-align: right
+    .text(Math.round(score));
+});
+ }
+
+//perintah untuk mengeksekusi simpan dalam bentuk gambar
+d3.select("#save").on("click", function(){
+    var svg = document.querySelector("svg");
+    var svgData = new XMLSerializer().serializeToString(svg);
+    
+    //console.log(html);
+    var imgsrc = "data:image/svg+xml;base64," + btoa(svgData);
+    var img = '<img src="'+imgsrc+'">'; 
+    d3.select("#svgdataurl").html(img);
+        
+    var canvas = document.querySelector("canvas"),
+    context = canvas.getContext("2d");
+    
+    var image = new Image;
+    image.src = imgsrc;
+    image.onload = function() {
+    context.drawImage(image, 0, 0);
+    
+    var a = document.createElement("a");
+    a.download = "fallback.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+};
+});
+    
+ //perintah untuk mengeksekusi simpan dalam bentuk pdf      
+ d3.select("#savepdf").on("click", function(){
+    var svg = document.querySelector("svg");
+    var svgData = new XMLSerializer().serializeToString(svg);
+    
+  //console.log(html);
+    var imgsrc = 'data:image/svg+xml;base64,'+ btoa(svgData);
+    var img = '<img src="'+imgsrc+'">'; 
+    d3.select("#svgdataurl").html(img);
+  
+    if(drop=="line"){ 
+        var canvas = document.getElementById('canvaspdf'),
+            context = canvas.getContext("2d");
+    }
+    else{
+        var canvas = document.getElementById('Canvas'),
+        context = canvas.getContext("2d");
+    }
+     
+    var image = new Image;
+    image.src = imgsrc;
+    image.onload = function() {
+        context.drawImage(image, 0, 0);
+
+        // only jpeg is supported by jsPDF
+        var imgData = canvas.toDataURL("image/jpeg", 1.0);
+        var pdf = new jsPDF('l', 'mm', [297, 210]);
+        
+        pdf.addImage(imgData, 'JPEG', 0, 0);
+        var savepdf = document.getElementById('savepdf');
+        pdf.save("fallback.pdf");
+    };
+  });  
+}
+</script>
+
+<script>  
+//fungsi klikreal akan dikerjakan ketikan memilih chart real time
+function klikreal(){
+
+  //var typer untuk menampung pilihan user apakah bar, line atau area chart
+var typer; 
+typer=$('#typer :selected').val();
+
+//ambil data dan diparsing ke dalam variabel col dan row
+d3.json("generated.json", function(error, data) {
+$.each(data, function(key, value){
+  col=Object.keys(value)[0];
+  row=Object.keys(value)[1];
+  });
+
+//kemudian data json akan dimasukan ke dalam array dan nanti akan dipilih yang akan menjadi nilai x dan y
+ var da=new Array();
+ var dataa;
+  var t=0;
+  data.forEach(function(d) {
+   d.col = d[col];
+        d.row = +d[row];
+  da[t]='[{"time":'+d.col+',"y":'+d.row+'}]';
+  t++;
+  });
+
+//jika memilih bar
+if (typer=="bar1") {
+  var sing=JSON.parse(da[0]);
+  var barChartData = [{label: "Series 1",values:sing}];
+  var barChartInstance = $('#hasilreal').epoch({
+  type: 'time.bar',
+  axes: ['right','bottom'],
+  data: barChartData,
+  });
+}
+
+//jika memilih line
+if (typer=="line1") {
+  var sing=JSON.parse(da[0]);
+  var barChartData = [{label: "Series 1",values:sing}];
+  var barChartInstance = $('#hasilreal').epoch({
+  type: 'time.line',
+  axes: ['right','bottom'],
+  data: barChartData,
+  });
+}
+
+//jika memilih area
+if (typer=="area1") {
+  var sing=JSON.parse(da[0]);
+  var barChartData = [{label: "Series 1",values:sing}];
+  var barChartInstance = $('#hasilreal').epoch({
+  type: 'time.area',
+  axes: ['right','bottom'],
+  data: barChartData,
+  });
+
+  //yang menentukan chart adalah "type: 'time.(bar,line atau area)'"
+}
+
+//memberikan interval random data. jadi setiap 1 detik data akan di push dan berulang  
+var d=1;
+window.setInterval(updateGraph, 1000);  
+function updateGraph() {
+    var sing=JSON.parse(da[d]);
+  var newBarChartData = sing;
+  barChartInstance.push(newBarChartData);
+d++;
+}
+});
+}
+</script>
+</body>
